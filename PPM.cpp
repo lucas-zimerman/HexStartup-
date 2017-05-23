@@ -9,11 +9,10 @@
 extern char str_buffer[200];
 
 
-#define CREATOR "RPFELGUEIRAS"
 #define RGB_COMPONENT_COLOR 255
 
 PPMImage *readPPM(const char *filename)
-{
+{//Code Created by: RPFELGUEIRAS
 	char buff[16];
 	PPMImage *img;
 	FILE *fp;
@@ -115,13 +114,12 @@ PPMImage *readPPM(const char *filename)
 	return img;
 }
 
-PPMPixel *Get_Palette(PPMImage *image, int *paletteLength) {
+PPMPixel *Get_Palette(PPMImage *image, int paletteLength) {
 	int i = 0, j = 0;
-	paletteLength[0] = 16;
 	int ImgLength = image->x * image->y;
-	PPMPixel *palette = (PPMPixel*)malloc(paletteLength[0] * sizeof(PPMPixel));//hard coded
-	bool *palette_started = (bool*)malloc(paletteLength[0] * sizeof(bool));
-	for (int i = 0; i < paletteLength[0]; i++) {
+	PPMPixel *palette = (PPMPixel*)malloc(paletteLength * sizeof(PPMPixel));//hard coded
+	bool *palette_started = (bool*)malloc(paletteLength* sizeof(bool));
+	for (int i = 0; i < paletteLength; i++) {
 		palette[i].blue = 0;
 		palette[i].green = 0;
 		palette[i].red = 0;
@@ -130,7 +128,7 @@ PPMPixel *Get_Palette(PPMImage *image, int *paletteLength) {
 	int disp_pos = 8;
 	insert_string_on_display("INDEX  R   ,G    ,B", 7, 10, DISPLAY_WINDOW1);
 	for (i = 0; i < ImgLength; i++) {
-		for (j = 0; j < paletteLength[0]; j++) {
+		for (j = 0; j < paletteLength; j++) {
 			if (palette[j].red == image->data[i].red && palette[j].green == image->data[i].green && palette[j].blue == image->data[i].blue) {
 				//we found the same color on index, jump.
 				break;

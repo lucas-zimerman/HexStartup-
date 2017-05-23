@@ -2,15 +2,19 @@
 #include <stdlib.h>
 #include "PPM.h"
 #include "Hexen.h"
+#include <MT2D/MessageBox/MT2D_MessageBox.h>
 #include <vector>
 
-Hexen_Startup_Lump *GetPPM_IndexedHexenStartupImage(PPMImage *image, PPMPixel *palette, int *palette_Length) {
+extern char str_buffer[200];
+
+
+Hexen_Startup_Lump *GetPPM_IndexedHexenStartupImage(PPMImage *image, PPMPixel *palette) {
 	Hexen_Startup_Lump *Hex = (Hexen_Startup_Lump*)malloc(sizeof(Hexen_Startup_Lump));
 	Hex->Ray_size = image->x * image->y;
 	Hex->Raw = (unsigned char*)malloc(Hex->Ray_size * sizeof(unsigned char));
 	int i = 0, j = 0, k = 0;
 	//save the color palette struct
-	Hex->Palette_size = palette_Length[0];
+	Hex->Palette_size = 16;
 	Hex->Palette = (PPMPixel*)malloc(Hex->Palette_size * sizeof(PPMPixel));
 	for (i = 0; i < Hex->Palette_size; i++) {
 		Hex->Palette[i].red = palette[i].red;
@@ -20,7 +24,7 @@ Hexen_Startup_Lump *GetPPM_IndexedHexenStartupImage(PPMImage *image, PPMPixel *p
 	//save the indexed color
 	j = 0;
 	for (i = 0; i < image->x * image->y; i++) {
-		for (k = 0; k < palette_Length[0]; k++) {
+		for (k = 0; k < Hex->Palette_size; k++) {
 			if (palette[k].red == image->data[i].red && palette[k].green == image->data[i].green && palette[k].blue == image->data[i].blue) {
 				Hex->Raw[j] = k;
 				j++;
@@ -34,6 +38,11 @@ Hexen_Startup_Lump *GetPPM_IndexedHexenStartupImage(PPMImage *image, PPMPixel *p
 
 void Save_HexenPlanarLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
 	FILE *f = fopen(PATH, "wb");
+	if (!f) {
+		sprintf(str_buffer, "When trying to create the file %s:Error: %d (%s)", PATH, errno, strerror(errno));
+		MT2D_MessageBox(str_buffer);
+		return;
+	}
 	int x0, y0, PlanarSize;
 	bool NoPalette = false;
 

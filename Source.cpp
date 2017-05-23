@@ -68,7 +68,7 @@ void GenerateHexenStartup(char * PATH, int left) {
 	insert_string_on_display("PART 2 - CREATING PALETTE:", 1, 0, DISPLAY_WINDOW1);
 	MT2D_Draw_Window(DISPLAY_WINDOW1);
 	if (image->x == 640 && image->y == 480) {
-		palette = Get_Palette(image, &palette_Length);
+		palette = Get_Palette(image, 16);
 	}
 	if (!palette) {
 		insert_string_on_display(" FAILED", 1, 27, DISPLAY_WINDOW1);
@@ -81,7 +81,7 @@ void GenerateHexenStartup(char * PATH, int left) {
 
 	insert_string_on_display("PART 3 - CREATING INDEXED IMAGE:", 2, 0, DISPLAY_WINDOW1);
 	MT2D_Draw_Window(DISPLAY_WINDOW1);
-	Hexen_Startup_Lump *IndexedImage = GetPPM_IndexedHexenStartupImage(image, palette, &palette_Length);
+	Hexen_Startup_Lump *IndexedImage = GetPPM_IndexedHexenStartupImage(image, palette);
 	if (IndexedImage) {
 		insert_string_on_display(" OK     ", 2, 32, DISPLAY_WINDOW1);
 	}
@@ -173,7 +173,7 @@ void main(int argc, char *argv[]) {
 		insert_string_on_display("PART 2 - CREATING PALETTE:", 1, 0, DISPLAY_WINDOW1);
 		for (i = 0; i < argc; i++) {
 			if (Images[i].x == 640 && Images[i].y == 480) {
-				palette = Get_Palette(&Images[i], &PaletteLength);
+				palette = Get_Palette(&Images[i], 16);
 				break;
 			}
 		}
@@ -190,15 +190,15 @@ void main(int argc, char *argv[]) {
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
 		HexenLumps = (Hexen_Startup_Lump*)malloc(ImagesCnt * sizeof(Hexen_Startup_Lump));
 		//apply the palette to all those images
-		for (i = 0; i < argc; i++) {
-			HexenLumps[i] = *GetPPM_IndexedHexenStartupImage(&Images[i], palette, &PaletteLength);
+		for (i = 0; i < argc -1; i++) {
+			HexenLumps[i] = *GetPPM_IndexedHexenStartupImage(&Images[i], palette);
 		}
 		insert_string_on_display(" OK", 2, 32, DISPLAY_WINDOW1);
 		//if we reach this area, we have a valid palette
 		//now we just need to save all the input images in all their respective formats
 		insert_string_on_display("PART 4 - GENERATING HEXEN LUMPS:", 3, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		for (i = 0; i < argc; i++) {
+		for (i = 0; i < argc -1; i++) {
 			SaveHexenLump(i);
 		}
 		insert_string_on_display(" OK", 3, 35, DISPLAY_WINDOW1);

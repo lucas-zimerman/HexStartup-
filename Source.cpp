@@ -23,7 +23,7 @@ void screen_reset() {
 	insert_string_on_display("+  powered by +", 21, 60, DISPLAY_WINDOW1);
 	insert_string_on_display("+ MT2D ENGINE +", 22, 60, DISPLAY_WINDOW1);
 	insert_string_on_display("+++++++++++++++", 23, 60, DISPLAY_WINDOW1);
-	insert_string_on_display("HexStartup++ v1.0, created by IBM5155", 24, 40, DISPLAY_WINDOW1);
+	insert_string_on_display("HexStartup++ v1.01, created by IBM5155", 24, 40, DISPLAY_WINDOW1);
 	MT2D_Draw_Window(DISPLAY_WINDOW1);
 }
 

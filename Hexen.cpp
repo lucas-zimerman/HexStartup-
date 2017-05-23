@@ -17,9 +17,17 @@ Hexen_Startup_Lump *GetPPM_IndexedHexenStartupImage(PPMImage *image, PPMPixel *p
 	Hex->Palette_size = 16;
 	Hex->Palette = (PPMPixel*)malloc(Hex->Palette_size * sizeof(PPMPixel));
 	for (i = 0; i < Hex->Palette_size; i++) {
-		Hex->Palette[i].red = palette[i].red;
-		Hex->Palette[i].green = palette[i].green;
-		Hex->Palette[i].blue = palette[i].blue;
+		if (palette) {
+			Hex->Palette[i].red = palette[i].red;
+			Hex->Palette[i].green = palette[i].green;
+			Hex->Palette[i].blue = palette[i].blue;
+		}
+		else {
+			//happens when the user load notch or netnotch but not startup palette
+			Hex->Palette[i].red = 0;
+			Hex->Palette[i].green = 0;
+			Hex->Palette[i].blue = 0;
+		}
 	}
 	//save the indexed color
 	j = 0;

@@ -6,7 +6,27 @@
 #include <vector>
 
 extern char str_buffer[200];
-
+/*DataArray loads 8 bytes from the given index
+**/
+unsigned char Get_PlanarBitsFilter(unsigned char *DataArray, unsigned char Mask) {
+	unsigned char Output = 0;
+	int Moffset = Mask;
+	int i = 1,j=0;
+	while (Moffset != 1 /*0xb00000001*/) { //lets get how much we hould move
+		Moffset = Moffset >> 1;
+		i++;
+	}
+	Moffset = i;
+	for (j = 8,i=0; j > 0; j--, i++) {
+		if (j - Moffset >= 0) {
+			Output = Output | (DataArray[i] & Mask) << (j - Moffset);
+		}
+		else {
+			Output = Output | (DataArray[i] & Mask) >> abs(j - Moffset);
+		}
+	}
+	return Output;
+}
 
 Hexen_Startup_Lump *GetPPM_IndexedHexenStartupImage(PPMImage *image, PPMPixel *palette) {
 	Hexen_Startup_Lump *Hex = (Hexen_Startup_Lump*)malloc(sizeof(Hexen_Startup_Lump));
@@ -92,14 +112,10 @@ void Save_HexenPlanarLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
 	{
 		for (int x = x0; x > 0; x -= 8)
 		{
-			*pln1 = ((read[0] & 0x01) << 7 | (read[1] & 0x01) << 6 | (read[2] & 0x01) << 5 | (read[3] & 0x01) << 4
-				| (read[4] & 0x01) << 3 | (read[5] & 0x01) << 2 | (read[6] & 0x01) << 1 | (read[7] & 0x01));
-			*pln2 = ((read[0] & 0x02) << 6 | (read[1] & 0x02) << 5 | (read[2] & 0x02) << 4 | (read[3] & 0x02) << 3
-				| (read[4] & 0x02) << 2 | (read[5] & 0x02) << 1 | (read[6] & 0x02) | (read[7] & 0x02) >> 1);
-			*pln3 = ((read[0] & 0x04) << 5 | (read[1] & 0x04) << 4 | (read[2] & 0x04) << 3 | (read[3] & 0x04) << 2
-				| (read[4] & 0x04) << 1 | (read[5] & 0x04) | (read[6] & 0x04) >> 1 | (read[7] & 0x04) >> 2);
-			*pln4 = ((read[0] & 0x08) << 4 | (read[1] & 0x08) << 3 | (read[2] & 0x08) << 2 | (read[3] & 0x08) << 1
-				| (read[4] & 0x08) | (read[5] & 0x08) >> 1 | (read[6] & 0x08) >> 2 | (read[7] & 0x08) >> 3);
+			*pln1 = Get_PlanarBitsFilter(&read[0], 1 << 0/*0xb00000001*/); //pln1 receives the 8 1st bits from the first 8 arrays
+			*pln2 = Get_PlanarBitsFilter(&read[0], 1 << 1/*0xb00000010*/); //pln2 receives the 8 2nd bits from the first 8 arrays
+			*pln3 = Get_PlanarBitsFilter(&read[0], 1 << 2/*0xb00000100*/); //pln3 receives the 8 3rd bits from the first 8 arrays
+			*pln4 = Get_PlanarBitsFilter(&read[0], 1 << 3/*0xb00001000*/); //pln4 receives the 8 4rt bits from the first 8 arrays
 			read += 8;
 			pln1 += 1;
 			pln2 += 1;

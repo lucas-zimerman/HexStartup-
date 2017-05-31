@@ -1,9 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "Image.h"
-#include "png.h"
+#include "_png.h"
 #include "PPM.h"
 #include "Hexen.h"
+#include <MT2D/MessageBox/MT2D_MessageBox.h>
+#include <MT2D/MT2D_Display.h>
+#include <MT2D/MT2D.h>
+
+extern char str_buffer[200];
 
 ImageFormat PATH_GetType(char *PATH) {
 	ImageFormat _return= TYPE_UNSUPPORTED;
@@ -43,6 +48,7 @@ Image *Image_Load(char*PATH) {
 	ImageFormat Type;
 
 	PPMImage *ppmimg;
+	png_info *png;
 
 	if (PATH) {
 		Type = PATH_GetType(PATH);
@@ -58,7 +64,11 @@ Image *Image_Load(char*PATH) {
 				Img->Type = Type;
 			break;
 		}
+			break;
 		case TYPE_PNG:
+			Img = PNG_read_file(PATH);
+			Img->Loaded = true;
+			Img->Type = Type;
 			break;
 		}
 	}
@@ -92,6 +102,8 @@ Pixel *Image_GetPixel(Image *img, unsigned int X, unsigned int Y) {
 	case TYPE_PPM:
 		p = Image_GetPixel(img, X + Y * img->Width);
 		break;
+	case TYPE_PNG:
+		p = PNG_Get_Pixel(img, X, Y);
 	}
 	return p;
 }
@@ -102,6 +114,11 @@ Pixel *Image_GetPixel(Image *img,int offset) {
 	switch (img->Type) {
 	case TYPE_PPM:
 		p = PPM_GetPixel((PPMImage*)img->ImagePointer, offset);
+		break;
+	case TYPE_PNG:
+		Y = offset / img->Width;
+		X = offset - Y * img->Width;
+		p = Image_GetPixel(img, X, Y);
 		break;
 	default:
 
@@ -115,6 +132,51 @@ Pixel *Image_GetPixel(Image *img,int offset) {
 
 
 Pixel *Image_GetPalette(Image *image, int paletteLength) {
+	int i = 0, j = 0;
+	int ImgLength = image->Width * image->Height;
+	Pixel *palette = (Pixel*)malloc(paletteLength * sizeof(Pixel));//hard coded
+	Pixel *tmp;
+	bool *palette_started = (bool*)malloc(paletteLength * sizeof(bool));
+	for (int i = 0; i < paletteLength; i++) {
+		palette[i].blue = 0;
+		palette[i].green = 0;
+		palette[i].red = 0;
+		palette_started[i] = false;
+	}
+	int disp_pos = 8;
+	insert_string_on_display("INDEX  R   ,G    ,B", 7, 10, DISPLAY_WINDOW1);
+	for (i = 0; i < ImgLength; i++) {
+		for (j = 0; j < paletteLength; j++) {
+			tmp = Image_GetPixel(image, i);
+			if (palette[j].red == tmp->red && palette[j].green == tmp->green && palette[j].blue == tmp->blue) {
+				//we found the same color on index, jump.
+				break;
+			}
+			if (palette_started[j] == false) {
+				//color not found in the index, jump.
+				palette[j].red = tmp->red;
+				palette[j].green = tmp->green;
+				palette[j].blue = tmp->blue;
+				palette_started[j] = true;
+				/*MT2D STUFF*/
+				sprintf(str_buffer, "%2d    %3d  ,%3d  ,%3d", j, palette[j].red, palette[j].green, palette[j].blue);
+				insert_string_on_display(str_buffer, disp_pos, 10, DISPLAY_WINDOW1);
+				disp_pos++;
+				MT2D_Draw_Window(DISPLAY_WINDOW1);
+				/*=========*/
+				break;
+			}
+		}
+		if (j == 16) {
+			sprintf(str_buffer, "ERROR:this image has more than 16 colors, you can fix that with the  gimp software... More info here:https://docs.gimp.org/en/gimp-image-convert-indexed.html");
+			MT2D_MessageBox(str_buffer);
+			return 0;
+		}
+	}
+	return palette;
+
+
+
 	Pixel *Palette = 0;
 	switch(image->Type){
 	case TYPE_PPM:

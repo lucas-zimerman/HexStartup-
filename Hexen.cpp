@@ -52,12 +52,12 @@ Image *Image_Create_IndexedHexenGraphic(Image *image, Pixel *palette) {
 	int Raw_size = image->Width * image->Height;
 	unsigned char *Raw = (unsigned char*)malloc(Raw_size * sizeof(unsigned char));
 	int i = 0, j = 0, k = 0;
-	Pixel *tmp;
+	Pixel *tmp = (Pixel*)malloc(sizeof(Pixel));
 	//save the indexed color in a new struct
 	j = 0;
 	for (i = 0; i < Raw_size; i++) {
 		for (k = 0; k < 16; k++) {
-			tmp = Image_GetPixel(image, i);
+			Image_GetPixel(image, i, tmp);
 			if (palette[k].red == tmp->red && palette[k].green == tmp->green && palette[k].blue == tmp->blue) {
 				Raw[j] = k;
 				j++;
@@ -66,6 +66,7 @@ Image *Image_Create_IndexedHexenGraphic(Image *image, Pixel *palette) {
 		}
 
 	}
+	free(tmp);
 	Image *img = Image_CreateBlank();
 	img->Height = image->Height;
 	img->Width = image->Width;

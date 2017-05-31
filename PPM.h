@@ -7,5 +7,4 @@ typedef struct {
 } PPMImage;
 
 PPMImage *readPPM(const char *filename);
-Pixel *Get_Palette(PPMImage *image, int paletteLength);
-Pixel *PPM_GetPixel(PPMImage *img, int Offset);
+void PPM_GetPixel(PPMImage *img, int Offset, Pixel *p);

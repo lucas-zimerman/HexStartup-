@@ -13,4 +13,4 @@ struct PNG_Info {
 };
 
 Image *PNG_read_file(char *filename);
-Pixel *PNG_Get_Pixel(Image *img, int X, int Y);
+void PNG_Get_Pixel(Image *img, int X, int Y, Pixel *P);

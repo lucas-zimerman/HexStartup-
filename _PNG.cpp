@@ -105,9 +105,8 @@ Image *PNG_read_file(char *filename) {
 	return img;
 }
 
-Pixel *PNG_Get_Pixel(Image *img, int X, int Y) {
+void PNG_Get_Pixel(Image *img, int X, int Y, Pixel *P) {
 	PNG_Info *Pi = (PNG_Info*)img->ImagePointer;
-	Pixel *P = (Pixel*)malloc(sizeof(Pixel));
 	if (png_get_color_type(Pi->png, Pi->info) == PNG_COLOR_TYPE_RGB);
 //		abort_("[process_file] input file is PNG_COLOR_TYPE_RGB but must be PNG_COLOR_TYPE_RGBA "
 //			"(lacks the alpha channel)");
@@ -123,5 +122,4 @@ Pixel *PNG_Get_Pixel(Image *img, int X, int Y) {
 		P->red = ptr[0];
 		P->green = ptr[1];
 		P->blue = ptr[2];
-	return P;
 }

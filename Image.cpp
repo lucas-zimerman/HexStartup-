@@ -96,29 +96,26 @@ bool Image_Save(Image *img, char *PATH) {
 	}
 	return img->Saved;
 }
-Pixel *Image_GetPixel(Image *img, unsigned int X, unsigned int Y) {
-	Pixel *p =0;
+void Image_GetPixel(Image *img, unsigned int X, unsigned int Y, Pixel *p) {
 	switch (img->Type) {
 	case TYPE_PPM:
-		p = Image_GetPixel(img, X + Y * img->Width);
+		Image_GetPixel(img, X + Y * img->Width,p);
 		break;
 	case TYPE_PNG:
-		p = PNG_Get_Pixel(img, X, Y);
+		PNG_Get_Pixel(img, X, Y,p);
 	}
-	return p;
 }
 
-Pixel *Image_GetPixel(Image *img,int offset) {
+void Image_GetPixel(Image *img,int offset,Pixel *p) {
 	int X, Y;
-	Pixel *p =0;
 	switch (img->Type) {
 	case TYPE_PPM:
-		p = PPM_GetPixel((PPMImage*)img->ImagePointer, offset);
+		PPM_GetPixel((PPMImage*)img->ImagePointer, offset, p);
 		break;
 	case TYPE_PNG:
 		Y = offset / img->Width;
 		X = offset - Y * img->Width;
-		p = Image_GetPixel(img, X, Y);
+		Image_GetPixel(img, X, Y,p);
 		break;
 	default:
 
@@ -127,7 +124,6 @@ Pixel *Image_GetPixel(Image *img,int offset) {
 		break;
 	}
 
-	return p;
 }
 
 
@@ -135,7 +131,7 @@ Pixel *Image_GetPalette(Image *image, int paletteLength) {
 	int i = 0, j = 0;
 	int ImgLength = image->Width * image->Height;
 	Pixel *palette = (Pixel*)malloc(paletteLength * sizeof(Pixel));//hard coded
-	Pixel *tmp;
+	Pixel *tmp = (Pixel*)malloc(sizeof(Pixel));;
 	bool *palette_started = (bool*)malloc(paletteLength * sizeof(bool));
 	for (int i = 0; i < paletteLength; i++) {
 		palette[i].blue = 0;
@@ -147,7 +143,7 @@ Pixel *Image_GetPalette(Image *image, int paletteLength) {
 	insert_string_on_display("INDEX  R   ,G    ,B", 7, 10, DISPLAY_WINDOW1);
 	for (i = 0; i < ImgLength; i++) {
 		for (j = 0; j < paletteLength; j++) {
-			tmp = Image_GetPixel(image, i);
+			Image_GetPixel(image, i,tmp);
 			if (palette[j].red == tmp->red && palette[j].green == tmp->green && palette[j].blue == tmp->blue) {
 				//we found the same color on index, jump.
 				break;
@@ -170,22 +166,12 @@ Pixel *Image_GetPalette(Image *image, int paletteLength) {
 		if (j == 16) {
 			sprintf(str_buffer, "ERROR:this image has more than 16 colors, you can fix that with the  gimp software... More info here:https://docs.gimp.org/en/gimp-image-convert-indexed.html");
 			MT2D_MessageBox(str_buffer);
+			free(tmp);
 			return 0;
 		}
 	}
+	free(tmp);
 	return palette;
-
-
-
-	Pixel *Palette = 0;
-	switch(image->Type){
-	case TYPE_PPM:
-		Palette = Get_Palette((PPMImage*)image->ImagePointer, paletteLength);
-		break;
-	case TYPE_PNG:
-		break;
-	}
-	return Palette;
 }
 
 Image *Image_ImageConvert(Image *image, Pixel *Palette, ImageFormat ConverTo){

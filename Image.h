@@ -23,7 +23,7 @@ struct Image {
 Image *Image_CreateBlank();
 Image *Image_Load(char*PATH);
 bool Image_Save(Image *img,char *PATH);
-Pixel *Image_GetPixel(Image *img, unsigned int X, unsigned int Y);
-Pixel *Image_GetPixel(Image *img,int offset);
+void Image_GetPixel(Image *img, unsigned int X, unsigned int Y, Pixel *p);
+void Image_GetPixel(Image *img, int offset, Pixel *p);
 Pixel *Image_GetPalette(Image *image, int paletteLength);
 Image *Image_ImageConvert(Image *image,Pixel *Palette, ImageFormat ConverTo);

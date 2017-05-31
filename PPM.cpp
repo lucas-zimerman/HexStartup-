@@ -114,53 +114,8 @@ PPMImage *readPPM(const char *filename)
 	return img;
 }
 
-Pixel *Get_Palette(PPMImage *image, int paletteLength) {
-	int i = 0, j = 0;
-	int ImgLength = image->x * image->y;
-	Pixel *palette = (Pixel*)malloc(paletteLength * sizeof(Pixel));//hard coded
-	bool *palette_started = (bool*)malloc(paletteLength* sizeof(bool));
-	for (int i = 0; i < paletteLength; i++) {
-		palette[i].blue = 0;
-		palette[i].green = 0;
-		palette[i].red = 0;
-		palette_started[i] = false;
-	}
-	int disp_pos = 8;
-	insert_string_on_display("INDEX  R   ,G    ,B", 7, 10, DISPLAY_WINDOW1);
-	for (i = 0; i < ImgLength; i++) {
-		for (j = 0; j < paletteLength; j++) {
-			if (palette[j].red == image->data[i].red && palette[j].green == image->data[i].green && palette[j].blue == image->data[i].blue) {
-				//we found the same color on index, jump.
-				break;
-			}
-			if (palette_started[j] == false) {
-				//color not found in the index, jump.
-				palette[j].red = image->data[i].red;
-				palette[j].green = image->data[i].green;
-				palette[j].blue = image->data[i].blue;
-				palette_started[j] = true;
-				/*MT2D STUFF*/
-				sprintf(str_buffer, "%2d    %3d  ,%3d  ,%3d", j, palette[j].red, palette[j].green, palette[j].blue);
-				insert_string_on_display(str_buffer, disp_pos, 10, DISPLAY_WINDOW1);
-				disp_pos++;
-				MT2D_Draw_Window(DISPLAY_WINDOW1);
-				/*=========*/
-				break;
-			}
-		}
-		if (j == 16) {
-			sprintf(str_buffer, "ERROR:this image has more than 16 colors, you can fix that with the  gimp software... More info here:https://docs.gimp.org/en/gimp-image-convert-indexed.html");
-			MT2D_MessageBox(str_buffer);
-			return 0;
-		}
-	}
-	return palette;
-}
-
-Pixel *PPM_GetPixel(PPMImage *img, int Offset) {
-	Pixel *p = (Pixel*)malloc(sizeof(Pixel));
+void PPM_GetPixel(PPMImage *img, int Offset,Pixel *p) {
 	p->blue = img->data[Offset].blue;
 	p->red = img->data[Offset].red;
 	p->green = img->data[Offset].green;
-	return p;
 }

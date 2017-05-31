@@ -91,7 +91,7 @@ PPMImage *readPPM(const char *filename)
 
 	while (fgetc(fp) != '\n');
 	//memory allocation for pixel data
-	img->data = (PPMPixel*)malloc(img->x * img->y * sizeof(PPMPixel));
+	img->data = (Pixel*)malloc(img->x * img->y * sizeof(Pixel));
 
 	if (!img) {
 		//		fprintf(stderr, "Unable to allocate memory\n");
@@ -114,10 +114,10 @@ PPMImage *readPPM(const char *filename)
 	return img;
 }
 
-PPMPixel *Get_Palette(PPMImage *image, int paletteLength) {
+Pixel *Get_Palette(PPMImage *image, int paletteLength) {
 	int i = 0, j = 0;
 	int ImgLength = image->x * image->y;
-	PPMPixel *palette = (PPMPixel*)malloc(paletteLength * sizeof(PPMPixel));//hard coded
+	Pixel *palette = (Pixel*)malloc(paletteLength * sizeof(Pixel));//hard coded
 	bool *palette_started = (bool*)malloc(paletteLength* sizeof(bool));
 	for (int i = 0; i < paletteLength; i++) {
 		palette[i].blue = 0;
@@ -155,4 +155,12 @@ PPMPixel *Get_Palette(PPMImage *image, int paletteLength) {
 		}
 	}
 	return palette;
+}
+
+Pixel *PPM_GetPixel(PPMImage *img, int Offset) {
+	Pixel *p = (Pixel*)malloc(sizeof(Pixel));
+	p->blue = img->data[Offset].blue;
+	p->red = img->data[Offset].red;
+	p->green = img->data[Offset].green;
+	return p;
 }

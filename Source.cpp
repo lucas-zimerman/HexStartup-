@@ -8,8 +8,10 @@
 #include <MT2D/InputBox/MT2D_InputBox_String.h>
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
 #include <MT2D/MessageBox/MT2D_MessageBox_With_Result.h>
-#include "PPM.h"
-#include "Hexen.h"
+#include "Image.h"
+#include "Pixel.h"
+//#include "PPM.h"
+//#include "Hexen.h"
 
 char str_buffer[200];
 
@@ -28,21 +30,21 @@ void screen_reset() {
 }
 
 
-Hexen_Startup_Lump *HexenLumps = 0;
-PPMImage *Images = 0;
+Image *HexenLumps = 0;
+Image *Images = 0;
 int       ImagesCnt =0;
-PPMPixel *palette = 0;
+Pixel *palette = 0;
 
 
 void SaveHexenLump(int Index) {
-	if (HexenLumps[Index].Ray_size == 640 * 480) {
-		Save_HexenPlanarLump("STARTUP.DAT", &HexenLumps[Index]);
+	if (HexenLumps[Index].Width * HexenLumps[Index].Height == 640 * 480) {
+		Image_Save(&HexenLumps[Index], "STARTUP.DAT");
 	}
-	else if (HexenLumps[Index].Ray_size == 16 * 23) {
-		Save_HexenBitmapLump("NOTCH.DAT", &HexenLumps[Index]);
+	else if (HexenLumps[Index].Width * HexenLumps[Index].Height == 16 * 23) {
+		Image_Save(&HexenLumps[Index], "NOTCH.DAT");
 	}
-	else if (HexenLumps[Index].Ray_size == 4 * 16) {
-		Save_HexenBitmapLump("NETNOTCH.DAT", &HexenLumps[Index]);
+	else if (HexenLumps[Index].Width * HexenLumps[Index].Height == 4 * 16) {
+		Image_Save(&HexenLumps[Index], "NETNOTCH.DAT");
 	}
 }
 
@@ -57,7 +59,7 @@ void GenerateHexenStartup(char * PATH, int left) {
 
 	insert_string_on_display("PART 1 - LOADING IMAGE:", 0, 0, DISPLAY_WINDOW1);
 	MT2D_Draw_Window(DISPLAY_WINDOW1);
-	PPMImage *image = readPPM(PATH);
+	Image *image = Image_Load(PATH);
 	if (image) {
 		insert_string_on_display(" OK    ", 0, 25, DISPLAY_WINDOW1);
 	}
@@ -67,8 +69,8 @@ void GenerateHexenStartup(char * PATH, int left) {
 	}
 	insert_string_on_display("PART 2 - CREATING PALETTE:", 1, 0, DISPLAY_WINDOW1);
 	MT2D_Draw_Window(DISPLAY_WINDOW1);
-	if (image->x == 640 && image->y == 480) {
-		palette = Get_Palette(image, 16);
+	if (image->Width == 640 && image->Width == 480) {
+		palette = Image_GetPalette(image, 16);
 	}
 	if (!palette) {
 		insert_string_on_display(" FAILED", 1, 27, DISPLAY_WINDOW1);
@@ -81,7 +83,7 @@ void GenerateHexenStartup(char * PATH, int left) {
 
 	insert_string_on_display("PART 3 - CREATING INDEXED IMAGE:", 2, 0, DISPLAY_WINDOW1);
 	MT2D_Draw_Window(DISPLAY_WINDOW1);
-	Hexen_Startup_Lump *IndexedImage = GetPPM_IndexedHexenStartupImage(image, palette);
+	Image *IndexedImage = Image_ImageConvert(image, palette,TYPE_Planar /*or 4BitBMP*/);
 	if (IndexedImage) {
 		insert_string_on_display(" OK     ", 2, 32, DISPLAY_WINDOW1);
 	}
@@ -91,24 +93,24 @@ void GenerateHexenStartup(char * PATH, int left) {
 	}
 
 
-	if (IndexedImage->Ray_size == 640 * 480) {
+	if (IndexedImage->Width * IndexedImage->Height == 640 * 480) {
 		insert_string_on_display("PART 4 - GENERATING PLANAR STARTUP:          ", 3, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		Save_HexenPlanarLump("STARTUP.DAT", IndexedImage);
+		Image_Save(IndexedImage, "STARTUP.DAT");
 	}
-	else if (IndexedImage->Ray_size == 16 * 23) {
+	else if (IndexedImage->Width * IndexedImage->Height == 16 * 23) {
 		insert_string_on_display("PART 4 - GENERATING BITMAP NOTCH:          ", 3, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		Save_HexenBitmapLump("NOTCH.DAT", IndexedImage);
+		Image_Save(IndexedImage, "NOTCH.DAT");
 	}
-	else if (IndexedImage->Ray_size == 4 * 16) {
+	else if (IndexedImage->Width * IndexedImage->Height == 4 * 16) {
 		insert_string_on_display("PART 4 - GENERATING BITMAP NOTCH:          ", 3, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		Save_HexenBitmapLump("NETNOTCH.DAT", IndexedImage);
+		Image_Save(IndexedImage, "NETNOTCH.DAT");
 	}
 	else {
 		insert_string_on_display("PART 4 - UNKNOWN TYPE OF LUMP TO BE GENERATED", 3, 0, DISPLAY_WINDOW1);
-		sprintf(str_buffer, "ERROR: file %s has a non standart size (%dx%d)", PATH, image->x, image->y);
+		sprintf(str_buffer, "ERROR: file %s has a non standart size (%dx%d)", PATH, image->Width, image->Height);
 		MT2D_MessageBox(str_buffer);
 		return;
 	}
@@ -134,7 +136,7 @@ void main(int argc, char *argv[]) {
 		do {
 			//PART 1: Get a valid file + PATH in case the file is in a folder other than the one where this software is
 			do {
-				PATH = MT2D_InputBox_String("type the name of the STARTUP.ppm image (and the file address if the image is in   another folder) - example 'test.ppm' ,' 'c:/test/img.ppm'");
+				PATH = MT2D_InputBox_String("type the name of the image file (and the file address if the image is in   another folder) - example 'test.ppm' ,' 'c:/test/img.ppm'");
 				test = fopen(PATH, "r");
 				if (!test) {
 					if (MT2D_MessageBox_With_Result("FILE NOT FOUND!", "Do you want to retry or exit?", "try again", "Exit") == 2) {
@@ -164,16 +166,16 @@ void main(int argc, char *argv[]) {
 		sprintf(str_buffer, "PART 1 - LOADING %d IMAGE%s:", argc-1,(argc==2? "" : "S"));
 		insert_string_on_display(str_buffer, 0, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		Images = (PPMImage*)malloc(ImagesCnt * sizeof(PPMImage));
+		Images = (Image*)malloc(ImagesCnt * sizeof(Image));
 		for (i = 1; i < argc; i++) {
-			Images[i - 1] = *readPPM(argv[i]);
+			Images[i - 1] = *Image_Load(argv[i]);
 		}
 		insert_string_on_display(" OK", 0, 28, DISPLAY_WINDOW1);
 		//if we reach this area, we have an array of valid images.
 		insert_string_on_display("PART 2 - CREATING PALETTE:", 1, 0, DISPLAY_WINDOW1);
 		for (i = 0; i < argc; i++) {
-			if (Images[i].x == 640 && Images[i].y == 480) {
-				palette = Get_Palette(&Images[i], 16);
+			if (Images[i].Width == 640 && Images[i].Height == 480) {
+				palette = Image_GetPalette(&Images[i], 16);
 				break;
 			}
 		}
@@ -188,10 +190,10 @@ void main(int argc, char *argv[]) {
 		//if we reach this area, we have a valid palette
 		insert_string_on_display("PART 3 - CREATING INDEXED IMAGE:", 2, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		HexenLumps = (Hexen_Startup_Lump*)malloc(ImagesCnt * sizeof(Hexen_Startup_Lump));
+		HexenLumps = (Image*)malloc(ImagesCnt * sizeof(Image));
 		//apply the palette to all those images
 		for (i = 0; i < argc -1; i++) {
-			HexenLumps[i] = *GetPPM_IndexedHexenStartupImage(&Images[i], palette);
+			HexenLumps[i] = *Image_ImageConvert(&Images[i], palette,TYPE_Planar /*or 4bit BMP*/);
 		}
 		insert_string_on_display(" OK", 2, 32, DISPLAY_WINDOW1);
 		//if we reach this area, we have a valid palette

@@ -1,18 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "PPM.h"
-#include "Hexen.h"
+#include "Image.h"
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
 #include <vector>
 
 extern char str_buffer[200];
-/*DataArray loads 8 bytes from the given index
+
+ImageFormat Hexen_GetImageType(unsigned int Width, unsigned int Height) {
+	ImageFormat _return = TYPE_UNSUPPORTED;
+	if(Width == 640 && Height == 480){
+		_return = TYPE_Planar;
+	}
+	else if (Width == 4 && Height == 16) {
+		_return = TYPE_4BitBitmap;
+	}
+	else if (Width == 16 && Height == 23) {
+		_return = TYPE_4BitBitmap;
+	}
+	return _return;
+}
+
+/*DataArray load 8 bytes from the given index
 **/
 unsigned char Get_PlanarBitsFilter(unsigned char *DataArray, unsigned char Mask) {
 	unsigned char Output = 0;
 	int Moffset = Mask;
 	int i = 1,j=0;
-	while (Moffset != 1 /*0xb00000001*/) { //lets get how much we hould move
+	while (Moffset != 1 /*0xb00000001*/) { //lets get how many steps the offset should be
 		Moffset = Moffset >> 1;
 		i++;
 	}
@@ -22,49 +36,47 @@ unsigned char Get_PlanarBitsFilter(unsigned char *DataArray, unsigned char Mask)
 			Output = Output | (DataArray[i] & Mask) << (j - Moffset);
 		}
 		else {
-			Output = Output | (DataArray[i] & Mask) >> abs(j - Moffset);
+			Output = Output | (DataArray[i] & Mask) >> abs(j - Moffset); 
 		}
+		// we cant just let << -1 because for the internal code the number after >> is unsigned, so << -1 is  << 12u8348932u4 and not >> 1.
 	}
+	/* how the data came
+		DataArray = {12345678,12345678,12345678,12345678,12345678,12345678,12345678,12345678,...};
+	   what the output should look like
+	    Output = 11111111; Output = 22222222; Output = 33333333; ... Output = 88888888;
+	*/
 	return Output;
 }
 
-Hexen_Startup_Lump *GetPPM_IndexedHexenStartupImage(PPMImage *image, PPMPixel *palette) {
-	Hexen_Startup_Lump *Hex = (Hexen_Startup_Lump*)malloc(sizeof(Hexen_Startup_Lump));
-	Hex->Ray_size = image->x * image->y;
-	Hex->Raw = (unsigned char*)malloc(Hex->Ray_size * sizeof(unsigned char));
+Image *Image_Create_IndexedHexenGraphic(Image *image, Pixel *palette) {
+	int Raw_size = image->Width * image->Height;
+	unsigned char *Raw = (unsigned char*)malloc(Raw_size * sizeof(unsigned char));
 	int i = 0, j = 0, k = 0;
-	//save the color palette struct
-	Hex->Palette_size = 16;
-	Hex->Palette = (PPMPixel*)malloc(Hex->Palette_size * sizeof(PPMPixel));
-	for (i = 0; i < Hex->Palette_size; i++) {
-		if (palette) {
-			Hex->Palette[i].red = palette[i].red;
-			Hex->Palette[i].green = palette[i].green;
-			Hex->Palette[i].blue = palette[i].blue;
-		}
-		else {
-			//happens when the user load notch or netnotch but not startup palette
-			Hex->Palette[i].red = 0;
-			Hex->Palette[i].green = 0;
-			Hex->Palette[i].blue = 0;
-		}
-	}
-	//save the indexed color
+	Pixel *tmp;
+	//save the indexed color in a new struct
 	j = 0;
-	for (i = 0; i < image->x * image->y; i++) {
-		for (k = 0; k < Hex->Palette_size; k++) {
-			if (palette[k].red == image->data[i].red && palette[k].green == image->data[i].green && palette[k].blue == image->data[i].blue) {
-				Hex->Raw[j] = k;
+	for (i = 0; i < Raw_size; i++) {
+		for (k = 0; k < 16; k++) {
+			tmp = Image_GetPixel(image, i);
+			if (palette[k].red == tmp->red && palette[k].green == tmp->green && palette[k].blue == tmp->blue) {
+				Raw[j] = k;
 				j++;
 				break;
 			}
 		}
 
 	}
-	return Hex;
+	Image *img = Image_CreateBlank();
+	img->Height = image->Height;
+	img->Width = image->Width;
+	img->ImagePointer = Raw;
+	img->Loaded = true;
+	img->Palette = palette;
+	img->Type = Hexen_GetImageType(img->Width,img->Height);
+	return img;
 }
 
-void Save_HexenPlanarLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
+void Save_HexenPlanarLump(char *PATH, Image *HexenLump) {
 	FILE *f = fopen(PATH, "wb");
 	if (!f) {
 		sprintf(str_buffer, "When trying to create the file %s:Error: %d (%s)", PATH, errno, strerror(errno));
@@ -74,7 +86,7 @@ void Save_HexenPlanarLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
 	int x0, y0, PlanarSize;
 	bool NoPalette = false;
 
-	if (HexenLump->Ray_size == 640 * 480) {
+	if (HexenLump->Width == 640 && HexenLump->Height == 480) {
 		//check if the file is a startup lump
 		x0 = 640;
 		y0 = 480;
@@ -102,7 +114,7 @@ void Save_HexenPlanarLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
 	uint8_t* pln1, *pln2, *pln3, *pln4, *read;
 	size_t plane_size = PlanarSize / 4;
 
-	read = HexenLump->Raw;
+	read = (uint8_t*)HexenLump->ImagePointer;
 	pln1 = planes;				// 80: 10000000	08: 00001000
 	pln2 = pln1 + plane_size;	// 40: 01000000 04: 00000100
 	pln3 = pln2 + plane_size;	// 20: 00100000 02: 00000010
@@ -132,11 +144,12 @@ void Save_HexenPlanarLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
 	fclose(f);
 }
 
-void Save_HexenBitmapLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
+void Save_HexenBitmapLump(char *PATH, Image *HexenLump) {
 	FILE *f = fopen(PATH, "wb");
 	int x0, y0, BitmapSize;
+	unsigned char *Raw = (unsigned char*)HexenLump->ImagePointer;
 
-	if (HexenLump->Ray_size == 4 * 16) {
+	if (HexenLump->Width == 4 && HexenLump->Height == 16) {
 		//check if the file is a NETNOTCH lump
 		x0 = 4;
 		y0 = 16;
@@ -152,10 +165,10 @@ void Save_HexenBitmapLump(char *PATH, Hexen_Startup_Lump *HexenLump) {
 	// Create 4-bit bitmap
 	uint8_t* temp = new uint8_t[BitmapSize];
 
-	for (int i = 0; i < HexenLump->Ray_size; i += 2)
+	for (int i = 0; i < HexenLump->Width * HexenLump->Height; i += 2)
 	{
 		// AAAABBBB = 0000AAAA << 4 |  0000BBBB
-		temp[i / 2] = HexenLump->Raw[i] << 4 | HexenLump->Raw[i + 1];
+		temp[i / 2] = Raw[i] << 4 | Raw[i + 1];
 	}
 
 	// Write image and cleanup

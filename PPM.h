@@ -1,12 +1,11 @@
 #pragma once
-typedef struct {
-	unsigned char red, green, blue;
-} PPMPixel;
+#include "Pixel.h"
 
 typedef struct {
 	int x, y;
-	PPMPixel *data;
+	Pixel *data;
 } PPMImage;
 
 PPMImage *readPPM(const char *filename);
-PPMPixel *Get_Palette(PPMImage *image, int paletteLength);
+Pixel *Get_Palette(PPMImage *image, int paletteLength);
+Pixel *PPM_GetPixel(PPMImage *img, int Offset);

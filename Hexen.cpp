@@ -53,17 +53,20 @@ unsigned char Get_PlanarBitsFilter(unsigned char *DataArray, unsigned char Mask)
 
 Image *Image_Create_IndexedHexenGraphic(Image *image, Pixel *palette) {
 	int Raw_size = image->Width * image->Height;
-	unsigned char *Raw = (unsigned char*)malloc(Raw_size * sizeof(unsigned char));
-	int i = 0, j = 0, k = 0;
+	// Pixels with no matching palette color get index 0.
+	unsigned char *Raw = (unsigned char*)calloc(Raw_size, sizeof(unsigned char));
+	int i = 0, k = 0;
+	if (!palette) {
+		// No STARTUP image to take the palette from: the caller already warned that the palette is all zero.
+		palette = (Pixel*)calloc(16, sizeof(Pixel));
+	}
 	Pixel *tmp = (Pixel*)malloc(sizeof(Pixel));
 	//save the indexed color in a new struct
-	j = 0;
 	for (i = 0; i < Raw_size; i++) {
+		Image_GetPixel(image, i, tmp);
 		for (k = 0; k < 16; k++) {
-			Image_GetPixel(image, i, tmp);
 			if (palette[k].red == tmp->red && palette[k].green == tmp->green && palette[k].blue == tmp->blue) {
-				Raw[j] = k;
-				j++;
+				Raw[i] = k;
 				break;
 			}
 		}

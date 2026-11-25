@@ -15,7 +15,8 @@ HexStartup sample/startup.png sample/notch.png
 HexStartup sample/startup.ppm sample/notch.ppm
 ```
 
-`tests/test_conversion.cpp` (run with `ctest`) converts both sets, decodes the resulting `STARTUP.DAT` and
-`NOTCH.DAT` and checks every pixel against these images, so regenerated images must keep those rules.
+`tests/test_conversion.cpp` (command line mode) and `tests/test_interactive.cpp` (interactive mode), both run with
+`ctest`, convert both sets, decode the resulting `STARTUP.DAT` and `NOTCH.DAT` and check every pixel against these
+images, so regenerated images must keep those rules.
 
 To regenerate them (needs Pillow): `python3 sample/generate.py`.

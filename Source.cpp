@@ -69,7 +69,7 @@ void GenerateHexenStartup(char * PATH, int left) {
 	}
 	insert_string_on_display("PART 2 - CREATING PALETTE:", 1, 0, DISPLAY_WINDOW1);
 	MT2D_Draw_Window(DISPLAY_WINDOW1);
-	if (image->Width == 640 && image->Width == 480) {
+	if (image->Width == 640 && image->Height == 480) {
 		palette = Image_GetPalette(image, 16);
 	}
 	if (!palette) {

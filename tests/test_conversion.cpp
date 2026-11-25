@@ -189,6 +189,44 @@ static void CheckNotch(const std::string &lump_path, const RefImage &ref, const 
 	CHECK(bad == 0, "%d notch pixels differ from the source", bad);
 }
 
+// PNG_read_file must fail cleanly (NULL, one message naming the file) on files it cannot read. Issue #9.
+static void CheckBadPng(const std::string &path, const char *what) {
+	Stub_ClearMessages();
+	std::string p = path;
+	Image *img = Image_Load(&p[0]);
+	CHECK(img == nullptr, "%s: loading %s did not fail", what, path.c_str());
+	CHECK(Stub_Messages().size() == 1, "%s: %zu messages shown, expected 1", what, Stub_Messages().size());
+	if (!Stub_Messages().empty()) {
+		CHECK(Stub_Messages()[0].find(path) != std::string::npos, "%s: message \"%s\" does not name the file", what,
+		      Stub_Messages()[0].c_str());
+	}
+}
+
+static void WriteFile(const std::string &path, const std::vector<unsigned char> &data) {
+	FILE *f = std::fopen(path.c_str(), "wb");
+	if (!f) return;
+	if (!data.empty()) std::fwrite(&data[0], 1, data.size(), f);
+	std::fclose(f);
+}
+
+static void CheckBadPngs(const std::string &in, const std::string &out) {
+	std::printf("-- unreadable png files\n");
+	const std::string missing = out + "missing.png";
+	std::remove(missing.c_str());
+	CheckBadPng(missing, "missing file");
+
+	const std::string not_png = out + "not_png.png";
+	WriteFile(not_png, ReadFile(in + "notch.ppm"));
+	CheckBadPng(not_png, "not a png");
+
+	std::vector<unsigned char> truncated = ReadFile(in + "startup.png");
+	CHECK(truncated.size() > 100, "cannot read %sstartup.png", in.c_str());
+	truncated.resize(truncated.size() / 2);
+	const std::string truncated_png = out + "truncated.png";
+	WriteFile(truncated_png, truncated);
+	CheckBadPng(truncated_png, "truncated png");
+}
+
 int main(int argc, char **argv) {
 	if (argc != 3) {
 		std::fprintf(stderr, "usage: %s <sample dir> <output dir>\n", argv[0]);
@@ -212,6 +250,8 @@ int main(int argc, char **argv) {
 		std::vector<Rgb> palette = CheckStartup(startup_dat, startup_ref);
 		CheckNotch(notch_dat, notch_ref, palette);
 	}
+
+	CheckBadPngs(in, out);
 
 	std::printf("-- png and ppm produce the same lumps\n");
 	CHECK(ReadFile(out + "STARTUP_png.DAT") == ReadFile(out + "STARTUP_ppm.DAT"), "STARTUP.DAT differs");

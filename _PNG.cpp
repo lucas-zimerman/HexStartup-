@@ -6,6 +6,7 @@
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
 #include <MT2D/MT2D_Display.h>
 #include <MT2D/MT2D.h>
+#include <MT2D/File/MT2D_File.h>
 
 /*
 * A simple libpng example program
@@ -27,36 +28,74 @@
 
 extern char str_buffer[200];
 
+/* libpng reads through MT2D_FILE instead of a FILE*, so this also works where MT2D_FILE is not a FILE (Android). */
+static void PNG_Read_Data(png_structp png, png_bytep data, png_size_t length) {
+	MT2D_FILE *file = (MT2D_FILE*)png_get_io_ptr(png);
+	if (MT2D_FILE_READ(file, data, 1, length) != length) {
+		png_error(png, "unexpected end of file");
+	}
+}
+
+/* Frees everything PNG_read_file allocated. Every pointer may be NULL. */
+static void PNG_Free(Image *img, PNG_Info *img_struct, MT2D_FILE *fp) {
+	if (img_struct) {
+		if (img_struct->row_pointers) {
+			for (unsigned int y = 0; y < img_struct->rows; y++) {
+				free(img_struct->row_pointers[y]);
+			}
+			free(img_struct->row_pointers);
+		}
+		if (img_struct->png) {
+			png_destroy_read_struct(&img_struct->png, img_struct->info ? &img_struct->info : NULL, NULL);
+		}
+		free(img_struct);
+	}
+	free(img);
+	if (fp) {
+		MT2D_FILE_CLOSE(fp);
+	}
+}
+
+static Image *PNG_Fail(const char *message, char *filename, Image *img, PNG_Info *img_struct, MT2D_FILE *fp) {
+	snprintf(str_buffer, sizeof(str_buffer), "PNG ERROR: %s: %s", message, filename);
+	MT2D_MessageBox(str_buffer);
+	PNG_Free(img, img_struct, fp);
+	return 0;
+}
 
 Image *PNG_read_file(char *filename) {
+	/* Only heap memory is changed after setjmp, so these locals keep their values when libpng longjmps back. */
+	MT2D_FILE *fp = MT2D_FILE_OPEN(filename, "rb");
+	if (!fp) {
+		return PNG_Fail("unable to open the file", filename, 0, 0, 0);
+	}
 	Image *img = Image_CreateBlank();
-	PNG_Info *img_struct = (PNG_Info*)malloc(sizeof(PNG_Info));
-	FILE *fp = fopen(filename, "rb");
+	PNG_Info *img_struct = (PNG_Info*)calloc(1, sizeof(PNG_Info));
+	if (!img || !img_struct) {
+		return PNG_Fail("out of memory", filename, img, img_struct, fp);
+	}
+
+	png_byte header[8];
+	if (MT2D_FILE_READ(fp, header, 1, sizeof(header)) != sizeof(header) || png_sig_cmp(header, 0, sizeof(header))) {
+		return PNG_Fail("not a PNG file", filename, img, img_struct, fp);
+	}
 
 	img_struct->png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (!img_struct->png) {
-		sprintf(str_buffer, "PNG ERROR:Unable to read image:", filename);
-		MT2D_MessageBox(str_buffer);
-		fclose(fp);
-		return 0;
+		return PNG_Fail("unable to create the read struct", filename, img, img_struct, fp);
 	}
 
 	img_struct->info = png_create_info_struct(img_struct->png);
 	if (!img_struct->info) {
-		sprintf(str_buffer, "PNG ERROR:Unable to create the info of from this image: ", filename);
-		MT2D_MessageBox(str_buffer);
-		fclose(fp);
-		return 0;
+		return PNG_Fail("unable to create the info struct", filename, img, img_struct, fp);
 	}
 
 	if (setjmp(png_jmpbuf(img_struct->png))) {
-		sprintf(str_buffer, "PNG ERROR:I really dont know whats this error is but if the original author said it's an error, so is it. : ", filename);
-		MT2D_MessageBox(str_buffer);
-		fclose(fp);
-		return 0;
+		return PNG_Fail("unable to decode the image", filename, img, img_struct, fp);
 	}
 
-	png_init_io(img_struct->png, fp);
+	png_set_read_fn(img_struct->png, fp, PNG_Read_Data);
+	png_set_sig_bytes(img_struct->png, sizeof(header));
 
 	png_read_info(img_struct->png, img_struct->info);
 
@@ -93,16 +132,24 @@ Image *PNG_read_file(char *filename) {
 
 	png_read_update_info(img_struct->png, img_struct->info);
 
-	png_bytep *row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * img->Height);
-	for (int y = 0; y < img->Height; y++) {
-		row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(img_struct->png, img_struct->info));
+	/* Kept in img_struct (not in locals) so the error path can free them. */
+	img_struct->row_pointers = (png_bytep*)calloc(img->Height, sizeof(png_bytep));
+	if (!img_struct->row_pointers) {
+		png_error(img_struct->png, "out of memory");
+	}
+	img_struct->rows = img->Height;
+	png_size_t row_bytes = png_get_rowbytes(img_struct->png, img_struct->info);
+	for (unsigned int y = 0; y < img->Height; y++) {
+		img_struct->row_pointers[y] = (png_byte*)malloc(row_bytes);
+		if (!img_struct->row_pointers[y]) {
+			png_error(img_struct->png, "out of memory");
+		}
 	}
 
-	png_read_image(img_struct->png, row_pointers);
-	img_struct->row_pointers = row_pointers;
+	png_read_image(img_struct->png, img_struct->row_pointers);
 	img->ImagePointer = img_struct;
 
-	fclose(fp);
+	MT2D_FILE_CLOSE(fp);
 	return img;
 }
 

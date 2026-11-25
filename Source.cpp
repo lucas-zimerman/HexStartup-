@@ -168,7 +168,15 @@ int main(int argc, char *argv[]) {
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
 		Images = (Image*)malloc(ImagesCnt * sizeof(Image));
 		for (i = 1; i < argc; i++) {
-			Images[i - 1] = *Image_Load(argv[i]);
+			Image *loaded = Image_Load(argv[i]);
+			if (!loaded) {
+				// the loader already showed why
+				insert_string_on_display(" FAILED", 0, 28, DISPLAY_WINDOW1);
+				MT2D_Draw_Window(DISPLAY_WINDOW1);
+				exit(1);
+			}
+			Images[i - 1] = *loaded;
+			free(loaded);
 		}
 		insert_string_on_display(" OK", 0, 28, DISPLAY_WINDOW1);
 		//if we reach this area, we have an array of valid images.

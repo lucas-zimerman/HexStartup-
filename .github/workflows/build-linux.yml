@@ -1,0 +1,43 @@
+name: Build (Linux)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.backend }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: terminal
+            cmake_flags: -DMT2D_SDL=OFF
+            packages: libpng-dev libncurses-dev
+          - backend: sdl
+            cmake_flags: -DMT2D_SDL=ON
+            packages: libpng-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build pkg-config ${{ matrix.packages }}
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }}
+
+      - name: Build
+        run: cmake --build build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HexStartup-linux-${{ matrix.backend }}
+          path: build/HexStartup

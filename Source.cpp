@@ -123,7 +123,7 @@ void menu() {
 	draw
 }
 */
-void main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
 
 /*  MT2D STUFF*/
@@ -208,4 +208,5 @@ void main(int argc, char *argv[]) {
 		//if we reach this area, we saved all the image files.
 		MT2D_MessageBox("All the input files were successfully converted and were saved in the folder where the images were.");
 	}
+	return 0;
 }

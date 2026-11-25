@@ -1,7 +1,8 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "Image.h"
-#include "_png.h"
+#include "_PNG.h"
 #include "PPM.h"
 #include "Hexen.h"
 #include <MT2D/MessageBox/MT2D_MessageBox.h>

@@ -260,3 +260,6 @@ ModelManifest.xml
 /FixMyHexenStartupColor.vcxproj
 /DOOM-760x428.png
 /Doom-1-.gif
+
+# CMake build trees
+build*/

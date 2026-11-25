@@ -1,0 +1,3 @@
+[submodule "external/MT2D"]
+	path = external/MT2D
+	url = https://github.com/lucas-zimerman/MT2D.git

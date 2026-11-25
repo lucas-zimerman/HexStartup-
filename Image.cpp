@@ -68,8 +68,10 @@ Image *Image_Load(char*PATH) {
 			break;
 		case TYPE_PNG:
 			Img = PNG_read_file(PATH);
-			Img->Loaded = true;
-			Img->Type = Type;
+			if (Img) {
+				Img->Loaded = true;
+				Img->Type = Type;
+			}
 			break;
 		}
 	}

@@ -73,3 +73,11 @@ else()
     # The MT2D API takes char* and the code passes string literals to it.
     target_compile_options(HexStartup PRIVATE -Wno-write-strings)
 endif()
+
+# --------------------------------------------------------------------------------------------
+# Tests (-DBUILD_TESTING=OFF to skip)
+# --------------------------------------------------------------------------------------------
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

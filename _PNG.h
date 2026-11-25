@@ -11,6 +11,7 @@ struct PNG_Info {
 	png_structp png;
 	png_infop info;
 	png_bytep *row_pointers;
+	unsigned int rows; /* number of entries in row_pointers */
 };
 
 Image *PNG_read_file(char *filename);

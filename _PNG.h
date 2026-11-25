@@ -5,6 +5,7 @@ Pixel *Get_Palette(PPMImage *image, int paletteLength);
 
 */
 #include <png.h>
+#include "Image.h"
 
 struct PNG_Info {
 	png_structp png;

@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <stdint.h>
 #include "Image.h"
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
 #include <vector>

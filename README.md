@@ -14,6 +14,7 @@ git submodule update --init
 
 cmake -S . -B build
 cmake --build build
+ctest --test-dir build --output-on-failure   # converts sample/ and checks the generated lumps
 ```
 
 Dependencies:
@@ -32,6 +33,8 @@ HexStartup startup.png notch.png netnotch.ppm
 Images can be `.png` or `.ppm` (P6), with at most 16 colors. The size picks the lump:
 640x480 -> `STARTUP.DAT`, 16x23 -> `NOTCH.DAT`, 4x16 -> `NETNOTCH.DAT`. When several files are passed, the palette of
 the 640x480 image is used for all of them.
+
+Ready-made images to try it with are in [`sample/`](sample/).
 
 ## Updating MT2D
 

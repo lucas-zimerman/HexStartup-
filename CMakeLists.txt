@@ -57,6 +57,7 @@ endif()
 # --------------------------------------------------------------------------------------------
 add_executable(HexStartup
     Source.cpp
+    Interactive.cpp
     Image.cpp
     Hexen.cpp
     PPM.cpp

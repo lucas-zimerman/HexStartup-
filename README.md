@@ -4,7 +4,7 @@ MORE INFO HERE: https://forum.zdoom.org/viewtopic.php?f=44&t=56556
 
 ## Building
 
-HexStartup uses the [MT2D](https://github.com/lucas-zimerman/MT2D) engine (4.0.0), included as a git submodule in
+HexStartup uses the [MT2D](https://github.com/lucas-zimerman/MT2D) engine (4.1.0), included as a git submodule in
 `external/MT2D`, and libpng. libpng 1.6.59 and zlib 1.4 are also included as submodules in `external/libpng` and
 `external/zlib`; they are only built when no system libpng is found.
 

@@ -89,6 +89,63 @@ static void CheckBadPngs(const std::string &in, const std::string &out) {
 	CheckBadPng(truncated_png, "truncated png");
 }
 
+// Writes a 640x480 PPM made of vertical bands of `colors`, with black at pixel `black_at` (-1 for no black).
+static std::string WritePaletteTestPPM(const std::string &path, int colors, int black_at) {
+	std::vector<unsigned char> data;
+	char header[32];
+	int n = std::snprintf(header, sizeof(header), "P6\n%d %d\n255\n", STARTUP_W, STARTUP_H);
+	data.insert(data.end(), header, header + n);
+	for (int i = 0; i < STARTUP_W * STARTUP_H; i++) {
+		int c = (i % STARTUP_W) * colors / STARTUP_W;
+		bool black = i == black_at;
+		data.push_back(black ? 0 : (unsigned char)(4 * (c + 1)));
+		data.push_back(black ? 0 : (unsigned char)(8 * c));
+		data.push_back(black ? 0 : 12);
+	}
+	WriteFile(path, data);
+	return path;
+}
+
+// Image_GetPalette must give black a palette slot like any other color, so 16 colors plus black is rejected
+// wherever the black pixel is. Issue #12.
+static void CheckPaletteBlack(const std::string &out) {
+	std::printf("-- black in the palette\n");
+	const int last = STARTUP_W * STARTUP_H - 1;
+	struct Case {
+		const char *name;
+		int colors, black_at;
+		bool valid;
+	} cases[] = {
+	    {"17colors_black_first.ppm", 16, 0, false},
+	    {"17colors_black_last.ppm", 16, last, false},
+	    {"16colors_black_first.ppm", 15, 0, true},
+	    {"16colors_black_last.ppm", 15, last, true},
+	};
+	for (const Case &c : cases) {
+		std::string path = WritePaletteTestPPM(out + c.name, c.colors, c.black_at);
+		Stub_ClearMessages();
+		Image *img = Image_Load(&path[0]);
+		CHECK(img && img->Loaded, "could not load %s", path.c_str());
+		if (!img) continue;
+		Pixel *palette = Image_GetPalette(img, 16);
+		if (!c.valid) {
+			CHECK(palette == nullptr, "%s: more than 16 colors was not rejected", c.name);
+			CHECK(Stub_Messages().size() == 1, "%s: %zu messages shown, expected 1", c.name, Stub_Messages().size());
+			continue;
+		}
+		CHECK(palette, "%s: no palette", c.name);
+		CHECK(Stub_Messages().empty(), "%s: %zu messages shown, expected none", c.name, Stub_Messages().size());
+		if (!palette) continue;
+		int black_slot = c.black_at == 0 ? 0 : 15; // slots are given in the order colors first appear
+		CHECK(palette[black_slot].red == 0 && palette[black_slot].green == 0 && palette[black_slot].blue == 0,
+		      "%s: slot %d is not black", c.name, black_slot);
+		for (int j = 0; j < 16; j++) {
+			if (j == black_slot) continue;
+			CHECK(palette[j].red || palette[j].green || palette[j].blue, "%s: black also in slot %d", c.name, j);
+		}
+	}
+}
+
 // readPPM parses the P6 header byte by byte through MT2D_FILE (issue #17). The notch pixels are written after
 // different headers; the valid ones must load the same pixels, the broken ones must fail with one message.
 static void CheckPpmHeaders(const std::string &out, const RefImage &notch_ref) {
@@ -177,6 +234,7 @@ int main(int argc, char **argv) {
 	}
 
 	CheckBadPngs(in, out);
+	CheckPaletteBlack(out);
 	CheckPpmHeaders(out, notch_ref);
 
 	std::printf("-- png and ppm produce the same lumps\n");

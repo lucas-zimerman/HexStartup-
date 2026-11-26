@@ -209,6 +209,59 @@ static void CheckPpmHeaders(const std::string &out, const RefImage &notch_ref) {
 	}
 }
 
+// HexStartup indexes the notch with the STARTUP palette (the lumps have no palette of their own). A notch pixel whose
+// color is not in that palette can not be shown correctly in game: it is stored as index 0, whatever color that is.
+// The first notch row is painted with a color the STARTUP image does not have, the rest is the normal notch.
+static void CheckNotchColorMismatch(const std::string &in, const std::string &out, const RefImage &notch_ref) {
+	std::printf("-- notch colors that are not in the startup palette\n");
+	const Rgb stray = {252, 0, 252};
+	std::vector<unsigned char> pixels;
+	for (int i = 0; i < NOTCH_W * NOTCH_H; ++i) {
+		const Rgb &c = i < NOTCH_W ? stray : notch_ref.px[i];
+		pixels.push_back(c.r);
+		pixels.push_back(c.g);
+		pixels.push_back(c.b);
+	}
+	std::vector<unsigned char> file;
+	const char header[] = "P6\n16 23\n255\n";
+	file.insert(file.end(), header, header + sizeof(header) - 1);
+	file.insert(file.end(), pixels.begin(), pixels.end());
+	std::string notch_path = out + "stray_notch.ppm";
+	WriteFile(notch_path, file);
+	std::string startup_path = in + "startup.ppm";
+
+	Stub_ClearMessages();
+	Image *startup = Image_Load(&startup_path[0]);
+	Image *notch = Image_Load(&notch_path[0]);
+	CHECK(startup && notch, "could not load the images");
+	if (!startup || !notch) return;
+	Pixel *palette = Image_GetPalette(startup, 16);
+	CHECK(palette, "no palette from %s", startup_path.c_str());
+	if (!palette) return;
+	for (int i = 0; i < 16; ++i) {
+		CHECK(!(palette[i].red == stray.r && palette[i].green == stray.g && palette[i].blue == stray.b),
+		      "the test color is in the startup palette, pick another one");
+	}
+
+	Image *lump = Image_ImageConvert(notch, palette, TYPE_Planar);
+	CHECK(lump && lump->Type == TYPE_4BitBitmap, "notch was not converted");
+	if (!lump) return;
+	const unsigned char *index = (const unsigned char*)lump->ImagePointer;
+	int bad = 0;
+	for (int i = 0; i < NOTCH_W * NOTCH_H; ++i) {
+		if (i < NOTCH_W) {
+			CHECK(index[i] == 0, "stray pixel %d got index %d, expected 0", i, index[i]);
+			continue;
+		}
+		const Pixel &p = palette[index[i]];
+		const Rgb &want = notch_ref.px[i];
+		if ((p.red != want.r || p.green != want.g || p.blue != want.b) && bad++ < 5) {
+			CHECK(false, "pixel %d (index %d) is not the color of the source", i, index[i]);
+		}
+	}
+	CHECK(bad == 0, "%d matching pixels were converted to a wrong color", bad);
+}
+
 int main(int argc, char **argv) {
 	if (argc != 3) {
 		std::fprintf(stderr, "usage: %s <sample dir> <output dir>\n", argv[0]);
@@ -236,6 +289,7 @@ int main(int argc, char **argv) {
 	CheckBadPngs(in, out);
 	CheckPaletteBlack(out);
 	CheckPpmHeaders(out, notch_ref);
+	CheckNotchColorMismatch(in, out, notch_ref);
 
 	std::printf("-- png and ppm produce the same lumps\n");
 	CHECK(ReadFile(out + "STARTUP_png.DAT") == ReadFile(out + "STARTUP_ppm.DAT"), "STARTUP.DAT differs");

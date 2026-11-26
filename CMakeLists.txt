@@ -75,6 +75,7 @@ endif()
 add_executable(HexStartup
     src/Source.cpp
     src/Interactive.cpp
+    src/Preview.cpp
     src/Image.cpp
     src/Hexen.cpp
     src/PPM.cpp

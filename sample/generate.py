@@ -104,10 +104,11 @@ def make_startup():
     centered_text(d, 40, "HEXSTARTUP", load_font(72), fill=8, shadow=0)
     centered_text(d, 130, "sample startup screen", load_font(24), fill=10, shadow=0)
 
-    # Progress bar trough where the notches are drawn.
-    d.rectangle([40, 400, 599, 440], fill=11, outline=13, width=3)
-    d.rectangle([46, 406, 593, 434], fill=0)
-    centered_text(d, 448, "16 colors - 640x480", load_font(14), fill=14)
+    # Progress bar trough where the notches are drawn. Hexen draws the 32 NOTCHes (16x23) from (64,441), so the inside
+    # of the trough is exactly x 64..575, y 441..463.
+    d.rectangle([61, 438, 578, 466], fill=11, outline=13, width=3)
+    d.rectangle([64, 441, 575, 463], fill=0)
+    centered_text(d, 410, "16 colors - 640x480", load_font(14), fill=14)
 
     return img
 

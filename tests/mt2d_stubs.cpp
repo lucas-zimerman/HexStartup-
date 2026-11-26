@@ -22,3 +22,10 @@ void Stub_ClearMessages() { g_messages.clear(); }
 void MT2D_MessageBox(char *mensage) { g_messages.push_back(mensage ? mensage : ""); }
 void insert_string_on_display(char *, int, int, unsigned char (*)[MAX_HOR]) {}
 void MT2D_Draw_Window(unsigned char (*)[MAX_HOR]) {}
+
+#include "Preview.h"
+bool Preview_Available() { return false; }
+void Preview_Show(Image *, Image *, Image *) {}
+
+#include <MT2D/MessageBox/MT2D_MessageBox_With_Result.h>
+int MT2D_MessageBox_With_Result(char *, char *, char *, char *) { return 2; }

@@ -3,14 +3,19 @@
 #include <MT2D/MT2D.h>
 #include <MT2D/MT2D_Display.h>
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
+#include <MT2D/MessageBox/MT2D_MessageBox_With_Result.h>
 #include "Image.h"
 #include "Interactive.h"
+#include "Preview.h"
 
 extern char str_buffer[200];
 
 // Shared with the command line mode in Source.cpp. Interactive mode keeps it between files, so a NOTCH or NETNOTCH
 // converted after a STARTUP image in the same session uses the STARTUP palette.
 Pixel *palette = 0;
+
+// The last STARTUP image converted in this session, the screen the notch previews are drawn over.
+static Image *LastStartup = 0;
 
 void GenerateHexenStartup(char * PATH, int left) {
 	int palette_Length = 0;
@@ -60,6 +65,7 @@ void GenerateHexenStartup(char * PATH, int left) {
 		insert_string_on_display("PART 4 - GENERATING PLANAR STARTUP:          ", 3, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
 		Image_Save(IndexedImage, "STARTUP.DAT");
+		LastStartup = IndexedImage;
 	}
 	else if (IndexedImage->Width * IndexedImage->Height == 16 * 23) {
 		insert_string_on_display("PART 4 - GENERATING BITMAP NOTCH:          ", 3, 0, DISPLAY_WINDOW1);
@@ -78,6 +84,11 @@ void GenerateHexenStartup(char * PATH, int left) {
 		return;
 	}
 	insert_string_on_display(" OK       ", 3, 35, DISPLAY_WINDOW1);
+	if (Preview_Available()) {
+		if (MT2D_MessageBox_With_Result("PREVIEW", "Do you want to preview the converted file?", "Yes", "No") == 1) {
+			Preview_Show(IndexedImage, image, LastStartup);
+		}
+	}
 	sprintf(str_buffer, "File '%s'  was created in the image folder.                     Press any key to %s", PATH, (left == 0 ? "exit." : "continue."));
 	MT2D_MessageBox(str_buffer);
 }

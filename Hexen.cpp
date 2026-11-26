@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "Image.h"
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
+#include <MT2D/File/MT2D_File.h>
 #include <vector>
 
 extern char str_buffer[200];
@@ -83,11 +84,25 @@ Image *Image_Create_IndexedHexenGraphic(Image *image, Pixel *palette) {
 	return img;
 }
 
-void Save_HexenPlanarLump(char *PATH, Image *HexenLump) {
-	FILE *f = fopen(PATH, "wb");
+static MT2D_FILE *Hexen_OpenLump(char *PATH) {
+	MT2D_FILE *f = MT2D_FILE_OPEN(PATH, "wb");
 	if (!f) {
-		sprintf(str_buffer, "When trying to create the file %s:Error: %d (%s)", PATH, errno, strerror(errno));
+		snprintf(str_buffer, sizeof(str_buffer), "When trying to create the file %s:Error: %d (%s)", PATH, errno, strerror(errno));
 		MT2D_MessageBox(str_buffer);
+	}
+	return f;
+}
+
+static void Hexen_WriteLump(char *PATH, MT2D_FILE *f, uint8_t *data, size_t size) {
+	if (MT2D_FILE_WRITE(f, data, 1, size) != size) {
+		snprintf(str_buffer, sizeof(str_buffer), "When trying to write the file %s:Error: %d (%s)", PATH, errno, strerror(errno));
+		MT2D_MessageBox(str_buffer);
+	}
+}
+
+void Save_HexenPlanarLump(char *PATH, Image *HexenLump) {
+	MT2D_FILE *f = Hexen_OpenLump(PATH);
+	if (!f) {
 		return;
 	}
 	int x0, y0, PlanarSize;
@@ -102,17 +117,14 @@ void Save_HexenPlanarLump(char *PATH, Image *HexenLump) {
 	/*there's no other format size, for now...*/
 	if (!NoPalette) {
 		// Create planar palette
-		uint8_t* mycolors = new uint8_t[3];
+		uint8_t mycolors[16 * 3];
 		for (size_t i = 0; i < 16; ++i)
 		{
-			mycolors[0] = HexenLump->Palette[i].red >> 2;
-			mycolors[1] = HexenLump->Palette[i].green >> 2;
-			mycolors[2] = HexenLump->Palette[i].blue >> 2;
-			fputc(mycolors[0], f);
-			fputc(mycolors[1], f);
-			fputc(mycolors[2], f);
+			mycolors[i * 3 + 0] = HexenLump->Palette[i].red >> 2;
+			mycolors[i * 3 + 1] = HexenLump->Palette[i].green >> 2;
+			mycolors[i * 3 + 2] = HexenLump->Palette[i].blue >> 2;
 		}
-		delete[] mycolors;
+		Hexen_WriteLump(PATH, f, mycolors, sizeof(mycolors));
 	}
 
 	// Create bitplanes
@@ -144,15 +156,16 @@ void Save_HexenPlanarLump(char *PATH, Image *HexenLump) {
 	}
 
 	// Write image and cleanup
-	for (int i = 0; i < PlanarSize; i++) {
-		fputc(planes[i], f);
-	}
+	Hexen_WriteLump(PATH, f, planes, PlanarSize);
 	delete[] planes;
-	fclose(f);
+	MT2D_FILE_CLOSE(f);
 }
 
 void Save_HexenBitmapLump(char *PATH, Image *HexenLump) {
-	FILE *f = fopen(PATH, "wb");
+	MT2D_FILE *f = Hexen_OpenLump(PATH);
+	if (!f) {
+		return;
+	}
 	int x0, y0, BitmapSize;
 	unsigned char *Raw = (unsigned char*)HexenLump->ImagePointer;
 
@@ -179,9 +192,7 @@ void Save_HexenBitmapLump(char *PATH, Image *HexenLump) {
 	}
 
 	// Write image and cleanup
-	for (int i = 0; i < BitmapSize; i++) {
-		fputc(temp[i], f);
-	}
+	Hexen_WriteLump(PATH, f, temp, BitmapSize);
 	delete[] temp;
-	fclose(f);
+	MT2D_FILE_CLOSE(f);
 }

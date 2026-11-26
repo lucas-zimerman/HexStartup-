@@ -262,6 +262,54 @@ static void CheckNotchColorMismatch(const std::string &in, const std::string &ou
 	CHECK(bad == 0, "%d matching pixels were converted to a wrong color", bad);
 }
 
+// Formats without a reader of their own go through MT2D's Load_Sprite_Image (stubbed, see mt2d_stubs.cpp). An RGBA
+// sprite must convert exactly like the PNG / PPM of the same pixels; index sprites, placeholders and missing files
+// must fail with one message.
+static MT2D_SpriteRaw *RawFrom(const RefImage &ref) {
+	MT2D_SpriteRaw *raw = MT2D_SpriteRaw_Create(ref.w, ref.h, true);
+	for (int i = 0; i < ref.w * ref.h; ++i) {
+		raw->Data.Rgba[i].R = ref.px[i].r;
+		raw->Data.Rgba[i].G = ref.px[i].g;
+		raw->Data.Rgba[i].B = ref.px[i].b;
+		raw->Data.Rgba[i].A = 255;
+	}
+	return raw;
+}
+
+static void CheckBadSprite(const std::string &path, const char *what) {
+	Stub_ClearMessages();
+	std::string p = path;
+	Image *img = Image_Load(&p[0]);
+	CHECK(img == nullptr, "%s: loading %s did not fail", what, path.c_str());
+	CHECK(Stub_Messages().size() == 1, "%s: %zu messages shown, expected 1", what, Stub_Messages().size());
+}
+
+static void CheckSpriteFallback(const std::string &in, const std::string &out, const RefImage &startup_ref,
+                                const RefImage &notch_ref) {
+	std::printf("-- sprite fallback\n");
+	MT2D_SpriteRaw *startup = RawFrom(startup_ref);
+	MT2D_SpriteRaw *notch = RawFrom(notch_ref);
+	Stub_SetSpriteImage(in + "startup.bmp", startup);
+	Stub_SetSpriteImage(in + "notch.bmp", notch);
+	MT2D_SpriteRaw_Free(startup);
+	MT2D_SpriteRaw_Free(notch);
+	const std::string startup_dat = out + "STARTUP_sprite.DAT";
+	const std::string notch_dat = out + "NOTCH_sprite.DAT";
+	std::remove(startup_dat.c_str());
+	std::remove(notch_dat.c_str());
+	if (Convert(in + "startup.bmp", in + "notch.bmp", startup_dat, notch_dat)) {
+		CHECK(ReadFile(startup_dat) == ReadFile(out + "STARTUP_ppm.DAT"), "STARTUP.DAT from the sprite differs");
+		CHECK(ReadFile(notch_dat) == ReadFile(out + "NOTCH_ppm.DAT"), "NOTCH.DAT from the sprite differs");
+	}
+
+	MT2D_SpriteRaw *indexed = MT2D_SpriteRaw_Create(NOTCH_W, NOTCH_H, false);
+	Stub_SetSpriteImage(out + "indexed.bmp", indexed);
+	MT2D_SpriteRaw_Free(indexed);
+	CheckBadSprite(out + "indexed.bmp", "index sprite");
+	CheckBadSprite(in + "README.md", "placeholder sprite");
+	CheckBadSprite(out + "missing.bmp", "missing file");
+}
+
 int main(int argc, char **argv) {
 	if (argc != 3) {
 		std::fprintf(stderr, "usage: %s <sample dir> <output dir>\n", argv[0]);
@@ -290,6 +338,7 @@ int main(int argc, char **argv) {
 	CheckPaletteBlack(out);
 	CheckPpmHeaders(out, notch_ref);
 	CheckNotchColorMismatch(in, out, notch_ref);
+	CheckSpriteFallback(in, out, startup_ref, notch_ref);
 
 	std::printf("-- png and ppm produce the same lumps\n");
 	CHECK(ReadFile(out + "STARTUP_png.DAT") == ReadFile(out + "STARTUP_ppm.DAT"), "STARTUP.DAT differs");

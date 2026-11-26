@@ -4,6 +4,7 @@
 #include "Image.h"
 #include "_PNG.h"
 #include "PPM.h"
+#include "SpriteImage.h"
 #include "Hexen.h"
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
 #include <MT2D/MT2D_Display.h>
@@ -73,6 +74,14 @@ Image *Image_Load(char*PATH) {
 				Img->Type = Type;
 			}
 			break;
+		default:
+			// No reader of our own: let MT2D try it (other formats on SDL builds, see SpriteImage.h).
+			Img = Sprite_read_file(PATH);
+			if (Img) {
+				Img->Loaded = true;
+				Img->Type = TYPE_SPRITE;
+			}
+			break;
 		}
 	}
 	return Img;
@@ -106,6 +115,10 @@ void Image_GetPixel(Image *img, unsigned int X, unsigned int Y, Pixel *p) {
 		break;
 	case TYPE_PNG:
 		PNG_Get_Pixel(img, X, Y,p);
+		break;
+	case TYPE_SPRITE:
+		Sprite_Get_Pixel(img, X, Y, p);
+		break;
 	}
 }
 
@@ -116,6 +129,7 @@ void Image_GetPixel(Image *img,int offset,Pixel *p) {
 		PPM_GetPixel((PPMImage*)img->ImagePointer, offset, p);
 		break;
 	case TYPE_PNG:
+	case TYPE_SPRITE:
 		Y = offset / img->Width;
 		X = offset - Y * img->Width;
 		Image_GetPixel(img, X, Y,p);

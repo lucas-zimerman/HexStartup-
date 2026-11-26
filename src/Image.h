@@ -6,7 +6,8 @@ enum ImageFormat {
 	TYPE_PPM,
 	TYPE_PNG,
 	TYPE_Planar,
-	TYPE_4BitBitmap
+	TYPE_4BitBitmap,
+	TYPE_SPRITE // any other format, read through MT2D sprites (SpriteImage.h)
 };
 
 struct Image {

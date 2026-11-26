@@ -11,6 +11,7 @@ function(hexstartup_add_test_executable name)
         ${PROJECT_SOURCE_DIR}/src/Hexen.cpp
         ${PROJECT_SOURCE_DIR}/src/PPM.cpp
         ${PROJECT_SOURCE_DIR}/src/_PNG.cpp
+        ${PROJECT_SOURCE_DIR}/src/SpriteImage.cpp
     )
     target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/src)
     # mt2d is linked for its include paths and backend defines; the stubs provide every MT2D symbol the code uses.

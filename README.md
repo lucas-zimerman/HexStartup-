@@ -33,7 +33,9 @@ HexStartup                              # interactive: asks for the image file
 HexStartup startup.png notch.png netnotch.ppm
 ```
 
-Images can be `.png` or `.ppm` (P6), with at most 16 colors. The size picks the lump:
+Images can be `.png` or `.ppm` (P6), with at most 16 colors. Other formats are handed to MT2D's sprite loader, so
+an SDL build (`-DMT2D_SDL=ON`) also reads whatever SDL_image supports (BMP, GIF, JPG, TGA, ...). The terminal, Sixel
+and MS-DOS builds only read `.png` and `.ppm`. The size picks the lump:
 640x480 -> `STARTUP.DAT`, 16x23 -> `NOTCH.DAT`, 4x16 -> `NETNOTCH.DAT`. When several files are passed, the palette of
 the 640x480 image is used for all of them.
 

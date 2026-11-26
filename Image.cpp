@@ -145,14 +145,12 @@ Pixel *Image_GetPalette(Image *image, int paletteLength) {
 	int disp_pos = 8;
 	insert_string_on_display("INDEX  R   ,G    ,B", 7, 10, DISPLAY_WINDOW1);
 	for (i = 0; i < ImgLength; i++) {
+		Image_GetPixel(image, i, tmp);
 		for (j = 0; j < paletteLength; j++) {
-			Image_GetPixel(image, i,tmp);
-			if (palette[j].red == tmp->red && palette[j].green == tmp->green && palette[j].blue == tmp->blue) {
-				//we found the same color on index, jump.
-				break;
-			}
+			// Check palette_started first: unused slots are (0,0,0) and would otherwise match black without claiming
+			// the slot, leaving black without a palette entry. Issue #12.
 			if (palette_started[j] == false) {
-				//color not found in the index, jump.
+				//color not found in the index, add it.
 				palette[j].red = tmp->red;
 				palette[j].green = tmp->green;
 				palette[j].blue = tmp->blue;
@@ -165,14 +163,21 @@ Pixel *Image_GetPalette(Image *image, int paletteLength) {
 				/*=========*/
 				break;
 			}
+			if (palette[j].red == tmp->red && palette[j].green == tmp->green && palette[j].blue == tmp->blue) {
+				//we found the same color on index, jump.
+				break;
+			}
 		}
-		if (j == 16) {
+		if (j == paletteLength) {
 			sprintf(str_buffer, "ERROR:this image has more than 16 colors, you can fix that with the  gimp software... More info here:https://docs.gimp.org/en/gimp-image-convert-indexed.html");
 			MT2D_MessageBox(str_buffer);
 			free(tmp);
+			free(palette_started);
+			free(palette);
 			return 0;
 		}
 	}
+	free(palette_started);
 	free(tmp);
 	return palette;
 }

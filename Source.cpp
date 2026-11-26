@@ -8,6 +8,7 @@
 #include <MT2D/InputBox/MT2D_InputBox_String.h>
 #include <MT2D/MessageBox/MT2D_MessageBox.h>
 #include <MT2D/MessageBox/MT2D_MessageBox_With_Result.h>
+#include <MT2D/File/MT2D_File.h>
 #include "Image.h"
 #include "Pixel.h"
 //#include "PPM.h"
@@ -132,12 +133,12 @@ int main(int argc, char *argv[]) {
 	/*  ==========*/
 	if (argc == 1) {
 		char *PATH = 0;
-		FILE *test;
+		MT2D_FILE *test;
 		do {
 			//PART 1: Get a valid file + PATH in case the file is in a folder other than the one where this software is
 			do {
 				PATH = MT2D_InputBox_String("type the name of the image file (and the file address if the image is in   another folder) - example 'test.ppm' ,' 'c:/test/img.ppm'");
-				test = fopen(PATH, "r");
+				test = MT2D_FILE_OPEN(PATH, "rb");
 				if (!test) {
 					if (MT2D_MessageBox_With_Result("FILE NOT FOUND!", "Do you want to retry or exit?", "try again", "Exit") == 2) {
 						exit(1);
@@ -150,7 +151,7 @@ int main(int argc, char *argv[]) {
 					}
 				}
 				else {
-					fclose(test);
+					MT2D_FILE_CLOSE(test);
 				}
 			} while (!PATH);
 			// END PART 1

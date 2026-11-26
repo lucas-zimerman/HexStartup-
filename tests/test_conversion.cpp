@@ -227,6 +227,69 @@ static void CheckBadPngs(const std::string &in, const std::string &out) {
 	CheckBadPng(truncated_png, "truncated png");
 }
 
+// readPPM parses the P6 header byte by byte through MT2D_FILE (issue #17). The notch pixels are written after
+// different headers; the valid ones must load the same pixels, the broken ones must fail with one message.
+static void CheckPpmHeaders(const std::string &out, const RefImage &notch_ref) {
+	std::printf("-- ppm headers\n");
+	std::vector<unsigned char> pixels;
+	for (const Rgb &c : notch_ref.px) {
+		pixels.push_back(c.r);
+		pixels.push_back(c.g);
+		pixels.push_back(c.b);
+	}
+	// The first pixel byte is 0xFF, the value MT2D_FILE_READ_BYTE returns at EOF.
+	std::vector<unsigned char> white_first = pixels;
+	white_first[0] = 0xFF;
+
+	struct Case {
+		const char *name, *header;
+		const std::vector<unsigned char> *data;
+		bool valid;
+	};
+	const Case cases[] = {
+	    {"plain", "P6\n16 23\n255\n", &pixels, true},
+	    {"one line", "P6 16 23 255 ", &pixels, true},
+	    {"comments", "P6\n# made by a test\n16 # width\n# height next\n23\n255\n", &pixels, true},
+	    {"tabs and crlf", "P6\r\n16\t23\r\n255\n", &pixels, true},
+	    {"0xff first byte", "P6\n16 23\n255\n", &white_first, true},
+	    {"P3", "P3\n16 23\n255\n", &pixels, false},
+	    {"no size", "P6\n# only a comment\n", &pixels, false},
+	    {"bad width", "P6\nx 23\n255\n", &pixels, false},
+	    {"4 bit", "P6\n16 23\n15\n", &pixels, false},
+	    {"truncated", "P6\n16 23\n255\n", nullptr, false},
+	};
+	for (const Case &c : cases) {
+		std::vector<unsigned char> file(c.header, c.header + std::string(c.header).size());
+		if (c.data) {
+			file.insert(file.end(), c.data->begin(), c.data->end());
+		} else {
+			file.insert(file.end(), pixels.begin(), pixels.begin() + pixels.size() / 2);
+		}
+		std::string path = out + "header.ppm";
+		WriteFile(path, file);
+
+		Stub_ClearMessages();
+		Image *img = Image_Load(&path[0]);
+		if (!c.valid) {
+			CHECK(img == nullptr, "%s: loading did not fail", c.name);
+			CHECK(Stub_Messages().size() == 1, "%s: %zu messages shown, expected 1", c.name, Stub_Messages().size());
+			continue;
+		}
+		CHECK(img && img->Width == NOTCH_W && img->Height == NOTCH_H, "%s: did not load as %dx%d", c.name, NOTCH_W,
+		      NOTCH_H);
+		CHECK(Stub_Messages().empty(), "%s: a message box was shown", c.name);
+		if (!img || img->Width != NOTCH_W || img->Height != NOTCH_H) continue;
+		int bad = 0;
+		for (int i = 0; i < NOTCH_W * NOTCH_H; ++i) {
+			Pixel px;
+			Image_GetPixel(img, i, &px);
+			const unsigned char *e = &(*c.data)[i * 3];
+			if (px.red != e[0] || px.green != e[1] || px.blue != e[2]) ++bad;
+		}
+		CHECK(bad == 0, "%s: %d pixels differ", c.name, bad);
+	}
+}
+
 int main(int argc, char **argv) {
 	if (argc != 3) {
 		std::fprintf(stderr, "usage: %s <sample dir> <output dir>\n", argv[0]);
@@ -252,6 +315,7 @@ int main(int argc, char **argv) {
 	}
 
 	CheckBadPngs(in, out);
+	CheckPpmHeaders(out, notch_ref);
 
 	std::printf("-- png and ppm produce the same lumps\n");
 	CHECK(ReadFile(out + "STARTUP_png.DAT") == ReadFile(out + "STARTUP_ppm.DAT"), "STARTUP.DAT differs");

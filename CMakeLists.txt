@@ -73,12 +73,12 @@ endif()
 # HexStartup
 # --------------------------------------------------------------------------------------------
 add_executable(HexStartup
-    Source.cpp
-    Interactive.cpp
-    Image.cpp
-    Hexen.cpp
-    PPM.cpp
-    _PNG.cpp
+    src/Source.cpp
+    src/Interactive.cpp
+    src/Image.cpp
+    src/Hexen.cpp
+    src/PPM.cpp
+    src/_PNG.cpp
 )
 target_link_libraries(HexStartup PRIVATE mt2d::mt2d ${HEXSTARTUP_PNG_LIBS})
 set_target_properties(HexStartup PROPERTIES

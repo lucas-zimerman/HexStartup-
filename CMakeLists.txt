@@ -80,6 +80,7 @@ add_executable(HexStartup
     src/Hexen.cpp
     src/PPM.cpp
     src/_PNG.cpp
+    src/SpriteImage.cpp
 )
 target_link_libraries(HexStartup PRIVATE mt2d::mt2d ${HEXSTARTUP_PNG_LIBS})
 set_target_properties(HexStartup PROPERTIES

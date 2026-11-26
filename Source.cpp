@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 		//lets find the main palette, apply to all the others images and also save as planar or 4bit bitmap
 		int i = 1;
 		int PaletteLength = 0;
-		ImagesCnt = argc;
+		ImagesCnt = argc - 1;
 		sprintf(str_buffer, "PART 1 - LOADING %d IMAGE%s:", argc-1,(argc==2? "" : "S"));
 		insert_string_on_display(str_buffer, 0, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 		insert_string_on_display(" OK", 0, 28, DISPLAY_WINDOW1);
 		//if we reach this area, we have an array of valid images.
 		insert_string_on_display("PART 2 - CREATING PALETTE:", 1, 0, DISPLAY_WINDOW1);
-		for (i = 0; i < argc; i++) {
+		for (i = 0; i < ImagesCnt; i++) {
 			if (Images[i].Width == 640 && Images[i].Height == 480) {
 				palette = Image_GetPalette(&Images[i], 16);
 				break;
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
 		HexenLumps = (Image*)malloc(ImagesCnt * sizeof(Image));
 		//apply the palette to all those images
-		for (i = 0; i < argc -1; i++) {
+		for (i = 0; i < ImagesCnt; i++) {
 			HexenLumps[i] = *Image_ImageConvert(&Images[i], palette,TYPE_Planar /*or 4bit BMP*/);
 		}
 		insert_string_on_display(" OK", 2, 32, DISPLAY_WINDOW1);
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
 		//now we just need to save all the input images in all their respective formats
 		insert_string_on_display("PART 4 - GENERATING HEXEN LUMPS:", 3, 0, DISPLAY_WINDOW1);
 		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		for (i = 0; i < argc -1; i++) {
+		for (i = 0; i < ImagesCnt; i++) {
 			SaveHexenLump(i);
 		}
 		insert_string_on_display(" OK", 3, 35, DISPLAY_WINDOW1);

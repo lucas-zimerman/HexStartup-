@@ -132,6 +132,35 @@ static void NotchLayout(const Image *notch, int *x, int *y, int *count) {
 	}
 }
 
+// The MS-DOS VGA screen is 320x200 and draws image sprites at their real size, so a 640x480 image does not fit: there
+// the arrow keys move the image. Everywhere else the image is scaled to the screen and any key closes the preview.
+#ifdef MSDOS_USE_GRAPHICS
+static const bool CanPan = true;
+#else
+static const bool CanPan = false;
+#endif
+static const int PanScreenW = 320, PanScreenH = 200, PanStep = 8;
+
+static int Clamp(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+// Reads the key that was pressed. Returns false when the preview should close. Arrow keys come as two values, the arrow
+// marker and then the arrow (see MT2D_Keyboard.h), and move the offset (ox,oy) of the image when panning is on.
+static bool HandleKey(int *ox, int *oy) {
+	int key = MT2D_Keyboard_keytouched();
+	if (!CanPan || key != arrow_key_pressed) {
+		return false;
+	}
+	switch (MT2D_Keyboard_keytouched()) {
+	case arrow_left_pressed:  *ox += PanStep; break;
+	case arrow_right_pressed: *ox -= PanStep; break;
+	case arrow_up_pressed:    *oy += PanStep; break;
+	case arrow_down_pressed:  *oy -= PanStep; break;
+	}
+	*ox = Clamp(*ox, PanScreenW - 640, 0);
+	*oy = Clamp(*oy, PanScreenH - 480, 0);
+	return true;
+}
+
 // Shows the converted image until a key is pressed. A STARTUP image is shown as it is. A NOTCH / NETNOTCH is drawn
 // over the converted STARTUP image (startup, with the palette they share), one more notch at a time, like the loading
 // bar of Hexen. Without a STARTUP image yet, the notches are drawn over a black screen with their own colors.
@@ -172,16 +201,25 @@ void Preview_Show(Image *converted, Image *source, Image *startup) {
 	while (MT2D_Keyboard_touched()) {
 		MT2D_Keyboard_keytouched();
 	}
+	// Offset of the image on the screen, only used when panning. A notch starts with its bar in view.
+	int ox = 0, oy = 0;
+	if (CanPan && !isStartup) {
+		ox = Clamp(-notchX, PanScreenW - 640, 0);
+		oy = Clamp(PanScreenH / 2 - notchY, PanScreenH - 480, 0);
+	}
 	if (isStartup) {
-		MT2D_Clear_Main_Window();
-		Sprite_Render_on_Window(s, DISPLAY_WINDOW1, 0, 0);
-		MT2D_Draw_Window(DISPLAY_WINDOW1);
-		MT2D_Keyboard_keytouched();
+		do {
+			MT2D_Clear_Main_Window();
+			Sprite_Render_on_Window(s, DISPLAY_WINDOW1, ox, oy);
+			MT2D_Draw_Window(DISPLAY_WINDOW1);
+		} while (HandleKey(&ox, &oy));
 	}
 	else {
-		// The notches fill in one by one, stay for a moment and start again, until a key is pressed (MT2D has no mouse input).
+		// The notches fill in one by one, stay for a moment and start again, until a key closes it (MT2D has no mouse
+		// input).
 		int n = 0;
-		while (!MT2D_Keyboard_touched()) {
+		bool open = true;
+		while (open) {
 			if (n == 0) {
 				MT2D_Sprite_Alter_Block(s, 0, 0, background); // the screen without notches
 			}
@@ -189,14 +227,16 @@ void Preview_Show(Image *converted, Image *source, Image *startup) {
 				MT2D_Sprite_Alter_Block(s, notchX + data.Width * (n - 1), notchY, notch);
 			}
 			MT2D_Clear_Main_Window();
-			Sprite_Render_on_Window(s, DISPLAY_WINDOW1, 0, 0);
+			Sprite_Render_on_Window(s, DISPLAY_WINDOW1, ox, oy);
 			MT2D_Draw_Window(DISPLAY_WINDOW1);
 			MT2D_System_Delay(n == notchCount ? 1000 : 120);
 			if (++n > notchCount) {
 				n = 0;
 			}
+			while (open && MT2D_Keyboard_touched()) {
+				open = HandleKey(&ox, &oy);
+			}
 		}
-		MT2D_Keyboard_keytouched();
 	}
 	Sprite_Delete(s);
 	MT2D_SpriteRaw_Free(background);

@@ -20,6 +20,9 @@ jobs:
           - backend: sdl
             cmake_flags: -DMT2D_SDL=ON
             packages: libpng-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev
+          - backend: bundled-png
+            cmake_flags: -DMT2D_SDL=OFF -DHEXSTARTUP_BUNDLED_PNG=ON
+            packages: libncurses-dev
 
     steps:
       - uses: actions/checkout@v4

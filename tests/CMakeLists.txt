@@ -7,12 +7,12 @@ function(hexstartup_add_test_executable name)
     add_executable(${name}
         ${ARGN}
         mt2d_stubs.cpp
-        ${PROJECT_SOURCE_DIR}/Image.cpp
-        ${PROJECT_SOURCE_DIR}/Hexen.cpp
-        ${PROJECT_SOURCE_DIR}/PPM.cpp
-        ${PROJECT_SOURCE_DIR}/_PNG.cpp
+        ${PROJECT_SOURCE_DIR}/src/Image.cpp
+        ${PROJECT_SOURCE_DIR}/src/Hexen.cpp
+        ${PROJECT_SOURCE_DIR}/src/PPM.cpp
+        ${PROJECT_SOURCE_DIR}/src/_PNG.cpp
     )
-    target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR})
+    target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/src)
     # mt2d is linked for its include paths and backend defines; the stubs provide every MT2D symbol the code uses.
     target_link_libraries(${name} PRIVATE mt2d::mt2d ${HEXSTARTUP_PNG_LIBS})
     set_target_properties(${name} PROPERTIES
@@ -26,7 +26,7 @@ function(hexstartup_add_test_executable name)
     endif()
 endfunction()
 
-# Command line mode: the test repeats the steps of Source.cpp's main().
+# Command line mode: the test repeats the steps of src/Source.cpp's main().
 hexstartup_add_test_executable(test_conversion test_conversion.cpp)
 set(TEST_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/output")
 file(MAKE_DIRECTORY "${TEST_OUTPUT_DIR}")
@@ -34,7 +34,7 @@ add_test(NAME sample_conversion
     COMMAND test_conversion "${PROJECT_SOURCE_DIR}/sample" "${TEST_OUTPUT_DIR}")
 
 # Interactive mode: runs GenerateHexenStartup itself, which writes its lumps into the current directory.
-hexstartup_add_test_executable(test_interactive test_interactive.cpp ${PROJECT_SOURCE_DIR}/Interactive.cpp)
+hexstartup_add_test_executable(test_interactive test_interactive.cpp ${PROJECT_SOURCE_DIR}/src/Interactive.cpp)
 set(TEST_INTERACTIVE_DIR "${CMAKE_CURRENT_BINARY_DIR}/output_interactive")
 file(MAKE_DIRECTORY "${TEST_INTERACTIVE_DIR}")
 add_test(NAME sample_interactive
